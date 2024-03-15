@@ -1,43 +1,84 @@
 package routes
 
 import (
-	"context"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"sort"
 
-	"github.com/gorilla/mux"
+	"github.com/gorilla/pat"
 	"github.com/markbates/goth/gothic"
 )
 
-// ContextKey represents a custom type for context keys to avoid collisions.
-type ContextKey string
+func AuthCallbackHandler() {
 
-// Define some context keys.
-const (
-	ContextKeyProvider ContextKey = "provider"
-)
-
-type Server struct{}
-
-func (s *Server) AuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	provider := vars["provider"]
-	r = r.WithContext(context.WithValue(r.Context(), ContextKeyProvider, provider))
-
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err != nil {
-		log.Println("Error completing user authentication:", err)
-		http.Error(w, "Error completing user authentication", http.StatusInternalServerError)
-		return
+	m := map[string]string{
+		"github": "Github",
 	}
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	fmt.Println(user)
-	// Handle authenticated user, for example, redirect or respond with user data.
+	providerIndex := &ProviderIndex{Providers: keys, ProvidersMap: m}
+
+	p := pat.New()
+	p.Get("/auth/{provider}/callback", func(res http.ResponseWriter, req *http.Request) {
+
+		user, err := gothic.CompleteUserAuth(res, req)
+		if err != nil {
+			fmt.Fprintln(res, err)
+			return
+		}
+		t, _ := template.New("foo").Parse(userTemplate)
+		t.Execute(res, user)
+	})
+
+	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
+		gothic.Logout(res, req)
+		res.Header().Set("Location", "/")
+		res.WriteHeader(http.StatusTemporaryRedirect)
+	})
+
+	p.Get("/auth/{provider}", func(res http.ResponseWriter, req *http.Request) {
+		// try to get the user without re-authenticating
+		if gothUser, err := gothic.CompleteUserAuth(res, req); err == nil {
+			t, _ := template.New("foo").Parse(userTemplate)
+			t.Execute(res, gothUser)
+		} else {
+			gothic.BeginAuthHandler(res, req)
+		}
+	})
+	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
+		t, _ := template.New("foo").Parse(indexTemplate)
+		t.Execute(res, providerIndex)
+	})
+
+	log.Println("listening on localhost:3000")
+	log.Fatal(http.ListenAndServe(":3000", p))
 }
 
-func (s *Server) SetupRoutes() http.Handler {
-	router := mux.NewRouter()
-	router.HandleFunc("/auth/{provider}/callback", s.AuthCallbackHandler)
-	return router
+type ProviderIndex struct {
+	Providers    []string
+	ProvidersMap map[string]string
 }
+
+var indexTemplate = `{{range $key,$value:=.Providers}}
+    <p><a href="/auth/{{$value}}">Log in with {{index $.ProvidersMap $value}}</a></p>
+{{end}}`
+
+var userTemplate = `
+<p><a href="/logout/{{.Provider}}">logout</a></p>
+<p>Name: {{.Name}} [{{.LastName}}, {{.FirstName}}]</p>
+<p>Email: {{.Email}}</p>
+<p>NickName: {{.NickName}}</p>
+<p>Location: {{.Location}}</p>
+<p>AvatarURL: {{.AvatarURL}} <img src="{{.AvatarURL}}"></p>
+<p>Description: {{.Description}}</p>
+<p>UserID: {{.UserID}}</p>
+<p>AccessToken: {{.AccessToken}}</p>
+<p>ExpiresAt: {{.ExpiresAt}}</p>
+<p>RefreshToken: {{.RefreshToken}}</p>
+`
