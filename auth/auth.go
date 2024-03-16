@@ -36,6 +36,6 @@ func Auth() {
 	gothic.Store = store
 
 	goth.UseProviders(
-		github.New(githubKey, githubSecret, "http://localhost:3000/auth/github/callback"),
+		github.New(githubKey, githubSecret, "http://localhost:8080/auth/github/callback"),
 	)
 }

@@ -35,7 +35,7 @@ func AuthCallbackHandler() {
 			return
 		}
 
-		session, err := store.Get(req, "go-session")
+		session, err := store.Get(req, "go-cookie-session-name")
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusInternalServerError)
 			return
@@ -56,7 +56,7 @@ func AuthCallbackHandler() {
 	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
 		gothic.Logout(res, req)
 
-		session, _ := store.Get(req, "go-session")
+		session, _ := store.Get(req, "go-cookie-session-name")
 		delete(session.Values, "user_id")
 		session.Save(req, res)
 
@@ -74,7 +74,7 @@ func AuthCallbackHandler() {
 	})
 
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
-		session, _ := store.Get(req, "go-session")
+		session, _ := store.Get(req, "go-cookie-session-name")
 		_, loggedIn := session.Values["user_id"]
 		userName := ""
 		if loggedIn {
@@ -89,8 +89,8 @@ func AuthCallbackHandler() {
 		}{providerIndex, loggedIn, userName})
 	})
 
-	log.Println("listening on localhost:3000")
-	log.Fatal(http.ListenAndServe(":3000", p))
+	log.Println("listening on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", p))
 }
 
 type ProviderIndex struct {
