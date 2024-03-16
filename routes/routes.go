@@ -35,8 +35,18 @@ func AuthCallbackHandler() {
 			return
 		}
 
-		session, _ := store.Get(req, "go-session")
+		session, err := store.Get(req, "go-session")
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if session.Values == nil {
+			session.Values = make(map[interface{}]interface{})
+		}
+
 		session.Values["user_id"] = user.UserID
+		session.Values["user_name"] = user.Name // Store user's name in the session
 		session.Save(req, res)
 
 		t, _ := template.New("foo").Parse(userTemplate)
@@ -66,13 +76,17 @@ func AuthCallbackHandler() {
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
 		session, _ := store.Get(req, "go-session")
 		_, loggedIn := session.Values["user_id"]
+		userName := ""
+		if loggedIn {
+			userName = session.Values["user_name"].(string)
+		}
 
 		t, _ := template.New("foo").Parse(indexTemplate)
 		t.Execute(res, struct {
 			ProviderIndex *ProviderIndex
 			LoggedIn      bool
-		}{providerIndex, loggedIn})
-
+			UserName      string
+		}{providerIndex, loggedIn, userName})
 	})
 
 	log.Println("listening on localhost:3000")
