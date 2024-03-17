@@ -134,46 +134,6 @@ func AuthCallbackHandler() {
 	log.Fatal(http.ListenAndServe(":8080", p))
 }
 
-// func revokeGitHubAccessToken(clientID, clientSecret, AccessToken string) error {
-// 	// Revoke the token from the token endpoint
-// 	tokenRevokeURL := fmt.Sprintf("https://api.github.com/applications/%s/token", clientID)
-
-// 	// Create JSON payload for the request
-// 	payload := []byte(fmt.Sprintf(`{"access_token":"%s"}`, AccessToken))
-
-// 	// Create HTTP client
-// 	client := &http.Client{}
-
-// 	// Create request
-// 	req, err := http.NewRequest("DELETE", tokenRevokeURL, bytes.NewBuffer(payload))
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// Set headers
-// 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-// 	// Set basic auth
-// 	req.SetBasicAuth(clientID, clientSecret)
-
-// 	// Send request
-// 	res, err := client.Do(req)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer res.Body.Close()
-
-// 	// Check response status code
-// 	if res.StatusCode != http.StatusNoContent {
-// 		return fmt.Errorf("failed to revoke access token. Status code: %d", res.StatusCode)
-// 	}
-
-// 	fmt.Println("Access token revoked successfully")
-
-// 	return nil
-// }
-
 func revokeAccessToken(clientID, clientSecret, AccessToken string) error {
 	// Revoke the token from the token endpoint
 	tokenRevokeURL := fmt.Sprintf("https://api.github.com/applications/%s/token", clientID)
