@@ -5,16 +5,37 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 
 	"github.com/gorilla/pat"
 	"github.com/gorilla/sessions" // Import Gorilla sessions package
+	"github.com/joho/godotenv"
 	"github.com/markbates/goth/gothic"
 )
 
-var store = sessions.NewCookieStore([]byte("your-secret-key")) // Replace "your-secret-key" with your secret key
+var store *sessions.CookieStore
+
+func init() {
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Retrieve secret key from environment variable
+	secretKey := os.Getenv("SECRET_KEY")
+
+	// Initialize session store with secret key
+	store = sessions.NewCookieStore([]byte(secretKey))
+}
 
 func AuthCallbackHandler() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	m := map[string]string{
 		"github": "Github",
 	}
@@ -46,7 +67,7 @@ func AuthCallbackHandler() {
 		}
 
 		session.Values["user_id"] = user.UserID
-		session.Values["user_name"] = user.Name // Store user's name in the session
+		session.Values["access_token"] = user.AccessToken // Store user's name in the session
 		session.Save(req, res)
 
 		t, _ := template.New("foo").Parse(userTemplate)
@@ -76,17 +97,17 @@ func AuthCallbackHandler() {
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
 		session, _ := store.Get(req, "go-cookie-session-name")
 		_, loggedIn := session.Values["user_id"]
-		userName := ""
+		accessToken := ""
 		if loggedIn {
-			userName = session.Values["user_name"].(string)
+			accessToken = session.Values["access_token"].(string)
 		}
 
 		t, _ := template.New("foo").Parse(indexTemplate)
 		t.Execute(res, struct {
 			ProviderIndex *ProviderIndex
 			LoggedIn      bool
-			UserName      string
-		}{providerIndex, loggedIn, userName})
+			AccessToken   string
+		}{providerIndex, loggedIn, accessToken})
 	})
 
 	log.Println("listening on http://localhost:8080")
@@ -102,7 +123,7 @@ var indexTemplate = `{{range $key,$value:=.ProviderIndex.Providers}}
 <p><a href="/auth/{{$value}}">Log in with {{index $.ProviderIndex.ProvidersMap $value}}</a></p>
 {{end}}
 {{if .LoggedIn}}
-<p>Welcome, {{.UserName}}!</p>
+<p>Welcome, {{.AccessToken}}!</p>
 <p><a href="/logout/github">Logout</a></p>
 {{end}}
 `
