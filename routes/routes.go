@@ -31,11 +31,6 @@ func init() {
 
 func AuthCallbackHandler() {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
 	m := map[string]string{
 		"github": "Github",
 	}
@@ -75,9 +70,6 @@ func AuthCallbackHandler() {
 
 	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
 		gothic.Logout(res, req)
-		if err := godotenv.Load(); err != nil {
-			log.Fatal("Error loading .env file")
-		}
 
 		session, _ := store.Get(req, "go-cookie-session-name")
 
