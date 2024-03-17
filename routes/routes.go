@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"log"
@@ -76,9 +77,28 @@ func AuthCallbackHandler() {
 
 	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
 		gothic.Logout(res, req)
+		if err := godotenv.Load(); err != nil {
+			log.Fatal("Error loading .env file")
+		}
+
+		clientID := os.Getenv("GITHUB_KEY")
+		clientSecret := os.Getenv("GITHUB_SECRET")
 
 		session, _ := store.Get(req, "go-cookie-session-name")
+
+		AccessToken, ok := session.Values["access_token"].(string)
+		if !ok {
+			fmt.Println("Access Token not found in session")
+			return
+		}
+
+		err := revokeAccessToken(clientID, clientSecret, AccessToken)
+		if err != nil {
+			fmt.Printf("Error revoking access token: %s\n", err)
+			return
+		}
 		delete(session.Values, "user_id")
+		session.Options.MaxAge = -1
 		session.Save(req, res)
 
 		res.Header().Set("Location", "/")
@@ -114,6 +134,87 @@ func AuthCallbackHandler() {
 	log.Fatal(http.ListenAndServe(":8080", p))
 }
 
+// func revokeGitHubAccessToken(clientID, clientSecret, AccessToken string) error {
+// 	// Revoke the token from the token endpoint
+// 	tokenRevokeURL := fmt.Sprintf("https://api.github.com/applications/%s/token", clientID)
+
+// 	// Create JSON payload for the request
+// 	payload := []byte(fmt.Sprintf(`{"access_token":"%s"}`, AccessToken))
+
+// 	// Create HTTP client
+// 	client := &http.Client{}
+
+// 	// Create request
+// 	req, err := http.NewRequest("DELETE", tokenRevokeURL, bytes.NewBuffer(payload))
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Set headers
+// 	req.Header.Set("Content-Type", "application/json")
+// 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+// 	// Set basic auth
+// 	req.SetBasicAuth(clientID, clientSecret)
+
+// 	// Send request
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer res.Body.Close()
+
+// 	// Check response status code
+// 	if res.StatusCode != http.StatusNoContent {
+// 		return fmt.Errorf("failed to revoke access token. Status code: %d", res.StatusCode)
+// 	}
+
+// 	fmt.Println("Access token revoked successfully")
+
+// 	return nil
+// }
+
+func revokeAccessToken(clientID, clientSecret, AccessToken string) error {
+	// Revoke the token from the token endpoint
+	tokenRevokeURL := fmt.Sprintf("https://api.github.com/applications/%s/token", clientID)
+
+	// Create JSON payload for the request
+	payload := []byte(fmt.Sprintf(`{"access_token":"%s"}`, AccessToken))
+
+	// Create HTTP client
+	client := &http.Client{}
+
+	// Create request
+	req, err := http.NewRequest("DELETE", tokenRevokeURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return err
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	// Set basic auth
+	req.SetBasicAuth(clientID, clientSecret)
+
+	// Send request
+	res, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	// Check response status code
+	if res.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to revoke access token. Status code: %d", res.StatusCode)
+	}
+
+	fmt.Println("Access token revoked successfully on GitHub API")
+	fmt.Println("Access token revoked locally")
+
+	return nil
+}
+
 type ProviderIndex struct {
 	Providers    []string
 	ProvidersMap map[string]string
@@ -123,7 +224,7 @@ var indexTemplate = `{{range $key,$value:=.ProviderIndex.Providers}}
 <p><a href="/auth/{{$value}}">Log in with {{index $.ProviderIndex.ProvidersMap $value}}</a></p>
 {{end}}
 {{if .LoggedIn}}
-<p>Welcome, {{.AccessToken}}!</p>
+<p>Access Token, {{.AccessToken}}!</p>
 <p><a href="/logout/github">Logout</a></p>
 {{end}}
 `
