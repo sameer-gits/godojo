@@ -71,8 +71,8 @@ func AuthCallbackHandler() {
 		session.Values["access_token"] = user.AccessToken // Store user's name in the session
 		session.Save(req, res)
 
-		t, _ := template.New("foo").Parse(userTemplate)
-		t.Execute(res, user)
+		http.Redirect(res, req, "/", http.StatusTemporaryRedirect)
+		fmt.Printf("user info: %s\n", user)
 	})
 
 	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
