@@ -35,6 +35,10 @@ func AuthCallbackHandler() {
 		}
 
 		session, err := auth.Store.Get(req, "go-cookie-session-name")
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		if session.Values == nil {
 			session.Values = make(map[interface{}]interface{})
