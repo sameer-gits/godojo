@@ -79,6 +79,27 @@ func AuthCallbackHandler() {
 		gothic.BeginAuthHandler(res, req)
 	})
 
+	// p.Get("/", func(res http.ResponseWriter, req *http.Request) {
+	// 	session, err := auth.Store.Get(req, "go-cookie-session-name")
+	// 	if err != nil {
+	// 		http.Error(res, err.Error(), http.StatusInternalServerError)
+	// 		return
+	// 	}
+
+	// 	_, loggedIn := session.Values["user_id"]
+	// 	accessToken := ""
+	// 	if loggedIn {
+	// 		accessToken = session.Values["access_token"].(string)
+	// 	}
+
+	// 	t, _ := template.New("foo").Parse(indexTemplate)
+	// 	t.Execute(res, struct {
+	// 		ProviderIndex *ProviderIndex
+	// 		LoggedIn      bool
+	// 		AccessToken   string
+	// 	}{providerIndex, loggedIn, accessToken})
+	// })
+
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
 		session, err := auth.Store.Get(req, "go-cookie-session-name")
 		if err != nil {
@@ -86,8 +107,15 @@ func AuthCallbackHandler() {
 			return
 		}
 
-		_, loggedIn := session.Values["user_id"]
+		userID := ""
+		loggedIn := false
 		accessToken := ""
+
+		if val, ok := session.Values["user_id"]; ok {
+			loggedIn = true
+			userID = val.(string)
+		}
+
 		if loggedIn {
 			accessToken = session.Values["access_token"].(string)
 		}
@@ -97,7 +125,8 @@ func AuthCallbackHandler() {
 			ProviderIndex *ProviderIndex
 			LoggedIn      bool
 			AccessToken   string
-		}{providerIndex, loggedIn, accessToken})
+			UserID        string // Adding UserID field
+		}{providerIndex, loggedIn, accessToken, userID})
 	})
 
 	log.Println("listening on http://localhost:8080")
@@ -116,6 +145,7 @@ var indexTemplate = `
   {{end}}
 {{else}}
   {{range $key, $value := .ProviderIndex.Providers}}
+    <p>User Id: {{$.UserID}}</p>
     <p>Access Token: {{$.AccessToken}}</p>
     <p><a href="/logout/{{$value}}">Logout using {{index $.ProviderIndex.ProvidersMap $value}}</a></p>
   {{end}}
