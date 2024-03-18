@@ -11,7 +11,7 @@ import (
 	"github.com/markbates/goth/providers/github"
 )
 
-var store *sessions.CookieStore
+var Store *sessions.CookieStore
 
 func Auth() {
 	err := godotenv.Load()
@@ -27,13 +27,13 @@ func Auth() {
 	maxAge := 86400 * 30 // 30 days
 	isProd := false      // Set to true when serving over HTTPS
 
-	store = sessions.NewCookieStore([]byte(key))
-	store.MaxAge(maxAge)
-	store.Options.Path = "/"
-	store.Options.HttpOnly = true // HttpOnly should always be enabled
-	store.Options.Secure = isProd
+	Store = sessions.NewCookieStore([]byte(key))
+	Store.MaxAge(maxAge)
+	Store.Options.Path = "/"
+	Store.Options.HttpOnly = true // HttpOnly should always be enabled
+	Store.Options.Secure = isProd
 
-	gothic.Store = store
+	gothic.Store = Store
 
 	goth.UseProviders(
 		github.New(githubKey, githubSecret, "http://localhost:8080/auth/github/callback"),

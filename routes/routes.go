@@ -5,29 +5,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"sort"
 
 	"github.com/gorilla/pat"
-	"github.com/gorilla/sessions" // Import Gorilla sessions package
-	"github.com/joho/godotenv"
 	"github.com/markbates/goth/gothic"
+	"github.com/sameer-gits/godojo/auth"
 )
-
-var store *sessions.CookieStore
-
-func init() {
-	// Load environment variables from .env file
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	// Retrieve secret key from environment variable
-	secretKey := os.Getenv("SECRET_KEY")
-
-	// Initialize session store with secret key
-	store = sessions.NewCookieStore([]byte(secretKey))
-}
 
 func AuthCallbackHandler() {
 
@@ -51,11 +34,7 @@ func AuthCallbackHandler() {
 			return
 		}
 
-		session, err := store.Get(req, "go-cookie-session-name")
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		session, err := auth.Store.Get(req, "go-cookie-session-name")
 
 		if session.Values == nil {
 			session.Values = make(map[interface{}]interface{})
@@ -71,7 +50,11 @@ func AuthCallbackHandler() {
 	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
 		gothic.Logout(res, req)
 
-		session, _ := store.Get(req, "go-cookie-session-name")
+		session, err := auth.Store.Get(req, "go-cookie-session-name")
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		session.Options.MaxAge = -1
 		session.Save(req, res)
@@ -80,7 +63,12 @@ func AuthCallbackHandler() {
 		res.WriteHeader(http.StatusTemporaryRedirect)
 	})
 	p.Get("/auth/{provider}", func(res http.ResponseWriter, req *http.Request) {
-		session, _ := store.Get(req, "go-cookie-session-name")
+		session, err := auth.Store.Get(req, "go-cookie-session-name")
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		if _, loggedIn := session.Values["user_id"]; loggedIn {
 			// If user is already logged in, redirect to the homepage
 			http.Redirect(res, req, "/", http.StatusSeeOther)
@@ -92,7 +80,12 @@ func AuthCallbackHandler() {
 	})
 
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
-		session, _ := store.Get(req, "go-cookie-session-name")
+		session, err := auth.Store.Get(req, "go-cookie-session-name")
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		_, loggedIn := session.Values["user_id"]
 		accessToken := ""
 		if loggedIn {
