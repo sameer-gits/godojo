@@ -73,7 +73,6 @@ func AuthCallbackHandler() {
 
 		session, _ := store.Get(req, "go-cookie-session-name")
 
-		delete(session.Values, "user_id")
 		session.Options.MaxAge = -1
 		session.Save(req, res)
 
