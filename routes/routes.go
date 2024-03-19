@@ -83,27 +83,6 @@ func AuthCallbackHandler() {
 		gothic.BeginAuthHandler(res, req)
 	})
 
-	// p.Get("/", func(res http.ResponseWriter, req *http.Request) {
-	// 	session, err := auth.Store.Get(req, "go-cookie-session-name")
-	// 	if err != nil {
-	// 		http.Error(res, err.Error(), http.StatusInternalServerError)
-	// 		return
-	// 	}
-
-	// 	_, loggedIn := session.Values["user_id"]
-	// 	accessToken := ""
-	// 	if loggedIn {
-	// 		accessToken = session.Values["access_token"].(string)
-	// 	}
-
-	// 	t, _ := template.New("foo").Parse(indexTemplate)
-	// 	t.Execute(res, struct {
-	// 		ProviderIndex *ProviderIndex
-	// 		LoggedIn      bool
-	// 		AccessToken   string
-	// 	}{providerIndex, loggedIn, accessToken})
-	// })
-
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
 		session, err := auth.Store.Get(req, "go-cookie-session-name")
 		if err != nil {
