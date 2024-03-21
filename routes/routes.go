@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/gorilla/pat"
+	"github.com/go-chi/chi/v5"
 	"github.com/markbates/goth/gothic"
 	"github.com/sameer-gits/godojo/auth"
 )
@@ -25,9 +25,14 @@ func AuthCallbackHandler() {
 
 	providerIndex := &ProviderIndex{Providers: keys, ProvidersMap: m}
 
-	p := pat.New()
+	p := chi.NewRouter()
 
 	p.Get("/auth/{provider}/callback", func(res http.ResponseWriter, req *http.Request) {
+
+		q := req.URL.Query()
+		q.Add("provider", chi.URLParam(req, "provider"))
+		req.URL.RawQuery = q.Encode()
+
 		user, err := gothic.CompleteUserAuth(res, req)
 		if err != nil {
 			fmt.Fprintln(res, err)
@@ -52,7 +57,8 @@ func AuthCallbackHandler() {
 	})
 
 	p.Get("/logout/{provider}", func(res http.ResponseWriter, req *http.Request) {
-		gothic.Logout(res, req)
+
+		// gothic.Logout(res, req) - below code is same as this
 
 		session, err := auth.Store.Get(req, "go-cookie-session-name")
 		if err != nil {
@@ -61,12 +67,20 @@ func AuthCallbackHandler() {
 		}
 
 		session.Options.MaxAge = -1
-		session.Save(req, res)
+		session.Values = make(map[interface{}]interface{})
+		err = session.Save(req, res)
+		if err != nil {
+			fmt.Sprintln(res, "Could not delete user session. error: %s", err)
+		}
 
 		res.Header().Set("Location", "/")
 		res.WriteHeader(http.StatusTemporaryRedirect)
 	})
 	p.Get("/auth/{provider}", func(res http.ResponseWriter, req *http.Request) {
+		q := req.URL.Query()
+		q.Add("provider", chi.URLParam(req, "provider"))
+		req.URL.RawQuery = q.Encode()
+
 		session, err := auth.Store.Get(req, "go-cookie-session-name")
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusInternalServerError)
@@ -84,6 +98,7 @@ func AuthCallbackHandler() {
 	})
 
 	p.Get("/", func(res http.ResponseWriter, req *http.Request) {
+
 		session, err := auth.Store.Get(req, "go-cookie-session-name")
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusInternalServerError)

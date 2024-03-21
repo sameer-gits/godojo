@@ -11,9 +11,8 @@ require (
 require github.com/gorilla/mux v1.8.1 // indirect
 
 require (
+	github.com/go-chi/chi/v5 v5.0.12
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/gorilla/context v1.1.2 // indirect
-	github.com/gorilla/pat v1.0.2
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
