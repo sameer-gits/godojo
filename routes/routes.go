@@ -60,9 +60,11 @@ func AuthCallbackHandler() {
 		session.Values["location"] = user.Location
 		session.Values["avatarURL"] = user.AvatarURL
 		session.Values["description"] = user.Description
-		// session.Values["expires_at"] = user.ExpiresAt
-		// session.Values["refresh_token"] = user.RefreshToken
+		session.Values["expires_at"] = user.ExpiresAt
+		session.Values["refresh_token"] = user.RefreshToken
 		session.Save(req, res)
+
+		log.Println(user)
 
 		http.Redirect(res, req, "/", http.StatusTemporaryRedirect)
 	})
